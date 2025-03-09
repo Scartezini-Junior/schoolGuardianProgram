@@ -495,4 +495,5 @@ threading.Thread(target=iniciar_servidor, daemon=True).start()
 
 # 🔹 Garantir que o script só rode quando chamado diretamente
 if __name__ == "__main__":
-    asyncio.run(iniciar_bot())  # ⚠️ Agora rodando corretamente sem conflito
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(iniciar_bot())  # 🚀 Correção do loop de eventos
