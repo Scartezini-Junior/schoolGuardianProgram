@@ -510,7 +510,7 @@ async def iniciar_bot():
 
 # 🔹 Executar Flask e Telegram Bot sem erro de asyncio.run()
 if __name__ == "__main__":
-    # 🔹 Rodar o Flask em uma thread separada
+    import asyncio    # 🔹 Rodar o Flask em uma thread separada
     flask_thread = threading.Thread(target=iniciar_servidor, daemon=True)
     flask_thread.start()
 
@@ -520,3 +520,6 @@ if __name__ == "__main__":
     # 🔹 Iniciar o loop do asyncio corretamente
     loop = asyncio.get_event_loop()
     loop.run_until_complete(iniciar_bot())
+
+    # 🔹 Mantém o processo rodando
+    loop.run_forever()
