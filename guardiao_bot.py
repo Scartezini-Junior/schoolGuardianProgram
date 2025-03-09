@@ -89,7 +89,7 @@ async def ajuda(update: Update, context: CallbackContext):
         "- Meios utilizados pelo agressor\n\n"
         "⚠️ *Importante*: Mantenha-se seguro e envie as informações apenas se isso não colocar sua segurança em risco."
     )
-   await update.message.reply_text(mensagem_ajuda, parse_mode='Markdown')
+    await update.message.reply_text(mensagem_ajuda, parse_mode='Markdown')
 
 # 🔹 Funções específicas para cada comando
 def bomba(update: Update, context: CallbackContext):
