@@ -6,7 +6,8 @@ import time
 import unicodedata
 import socket
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
+
 
 # Configurações
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -451,24 +452,24 @@ def iniciar_bot():
     """
     print("🚀 Iniciando Guardião Escolar...")
 
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
 
     # ✅ Adicionando handlers para comandos de emergência
-    dispatcher.add_handler(CommandHandler('bomba', bomba))
-    dispatcher.add_handler(CommandHandler('ameaca', ameaca))
-    dispatcher.add_handler(CommandHandler('refem', refem))
-    dispatcher.add_handler(CommandHandler('agressor', agressor))
-    dispatcher.add_handler(CommandHandler('homicidio', homicidio))
-    dispatcher.add_handler(CommandHandler('teste', teste))
+    application.add_handler(CommandHandler('bomba', bomba))
+    application.add_handler(CommandHandler('ameaca', ameaca))
+    application.add_handler(CommandHandler('refem', refem))
+    application.add_handler(CommandHandler('agressor', agressor))
+    application.add_handler(CommandHandler('homicidio', homicidio))
+    application.add_handler(CommandHandler('teste', teste))
 
     # ✅ Handler para cadastro
-    dispatcher.add_handler(CommandHandler('cadastro', cadastro))
+    application.add_handler(CommandHandler('cadastro', cadastro))
 
     # ✅ Handlers para comandos básicos
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('ajuda', ajuda))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, mensagem_recebida))
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('ajuda', ajuda))
+    application.add_handler(MessageHandler(Filters.text & ~Filters.command, mensagem_recebida))
 
     # ✅ Iniciar a atualização da planilha em segundo plano
     threading.Thread(target=atualizar_planilha_periodicamente, daemon=True).start()
@@ -479,8 +480,8 @@ def iniciar_bot():
     print("✅ Guardião Escolar está rodando! Aguardando mensagens...")
     
     # Iniciar o bot
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
+
 
 if __name__ == "__main__":
     print("🚀 Iniciando Guardião Escolar...")
