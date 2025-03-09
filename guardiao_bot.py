@@ -9,10 +9,11 @@ import gspread
 import aiohttp
 import requests
 from google.oauth2.service_account import Credentials
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from telegram import Update, CallbackQuery
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from flask import Flask
 import threading
+import time
 
 # Criando um servidor Flask Fake para manter o Render "feliz"
 app = Flask(__name__)
@@ -43,6 +44,9 @@ if GOOGLE_CREDENTIALS_JSON:
     GOOGLE_CREDENTIALS = json.loads(GOOGLE_CREDENTIALS_JSON)
 else:
     GOOGLE_CREDENTIALS = None
+
+# 🔹 Ping para manter o Render ativo
+RENDER_URL = "https://schoolguardianprogram.onrender.com"  # 🚀 ALTERE AQUI COM SUA URL REAL
 
 # 🔹 Adicionar um novo registro na planilha
 def adicionar_escola(user_id, nome, funcao, escola, telefone, email, endereco, localizacao, nome_aba="Escolas"):
@@ -470,6 +474,17 @@ async def listar_escolas(update: Update, context):
     except Exception as e:
         await update.message.reply_text("❌ Erro ao buscar lista de escolas.")
 
+def manter_online():
+    while True:
+        try:
+            requests.get(RENDER_URL)
+            print("✅ Ping enviado para manter a instância ativa.")
+        except Exception as e:
+            print(f"⚠️ Erro ao enviar ping: {e}")
+        time.sleep(600)  # ⏳ Aguarda 10 minutos antes do próximo ping
+
+# 🔹 Iniciar o ping em uma thread separada
+threading.Thread(target=manter_online, daemon=True).start()
 
 # 🔹 Função para rodar o Bot do Telegram corretamente
 async def iniciar_bot():
