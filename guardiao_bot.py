@@ -6,7 +6,7 @@ import time
 import unicodedata
 import socket
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 
 # Configurações
@@ -439,11 +439,11 @@ def monitorar_conexao(context=None):
         time.sleep(60)  # Verifica a cada 60 segundos
 
 # Iniciar o monitoramento da conexão em uma thread separada
-threading.Thread(target=monitorar_conexao, args=(updater.bot,), daemon=True).start()
+threading.Thread(target=monitorar_conexao, args=(application.bot,), daemon=True).start()
+
 
 
 import threading
-from telegram.ext import Updater
 
 # 🔹 Função para iniciar o bot no servidor
 def iniciar_bot():
@@ -469,13 +469,13 @@ def iniciar_bot():
     # ✅ Handlers para comandos básicos
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('ajuda', ajuda))
-    application.add_handler(MessageHandler(Filters.text & ~Filters.command, mensagem_recebida))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
 
     # ✅ Iniciar a atualização da planilha em segundo plano
     threading.Thread(target=atualizar_planilha_periodicamente, daemon=True).start()
-    
-    # ✅ Iniciar monitoramento da conexão em segundo plano
-    threading.Thread(target=monitorar_conexao, args=(updater.bot,), daemon=True).start()
+
+    # Iniciar o monitoramento da conexão usando application.bot
+    threading.Thread(target=monitorar_conexao, args=(application.bot,), daemon=True).start()
 
     print("✅ Guardião Escolar está rodando! Aguardando mensagens...")
     
