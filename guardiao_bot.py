@@ -18,17 +18,18 @@ import time
 # 🔹 Configuração de logs detalhados
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Criando um servidor Flask Fake para manter o Render "feliz"
+# 🔹 Criando um servidor Flask Fake para manter o Render "feliz"
 app = Flask(__name__)
 
 @app.route("/")
 def home():
     return "Bot está rodando!"
 
-# 🔹 Iniciar Flask em uma thread separada
+# 🔹 Função para iniciar o servidor Flask em uma thread separada
 def iniciar_servidor():
     logging.info("🌐 Iniciando o servidor Flask...")
     app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
+
 # 🔹 Ping para manter o Render ativo
 RENDER_URL = "https://schoolguardianprogram.onrender.com"  # 🚀 ALTERE AQUI COM SUA URL REAL
 
@@ -44,21 +45,19 @@ def manter_online():
 # 🔹 Configuração de autenticação do Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-# 🔹 Ler TELEGRAM_TOKEN
+# 🔹 Ler variáveis de ambiente
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-# 🔹 Ler ADMIN_USER_IDS e converter para lista
 ADMIN_USER_IDS = os.getenv("ADMIN_USER_IDS", "").strip("[]").replace('"', '').split(",")
 ADMIN_USER_IDS = [x.strip() for x in ADMIN_USER_IDS if x.strip()]
-
-# 🔹 Ler GOOGLE_CREDENTIALS_JSON corretamente
 GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
 
-# 🔹 Garantir que o JSON seja interpretado corretamente
+# 🔹 Garantir que o JSON de credenciais seja interpretado corretamente
 if GOOGLE_CREDENTIALS_JSON:
     GOOGLE_CREDENTIALS = json.loads(GOOGLE_CREDENTIALS_JSON)
 else:
     GOOGLE_CREDENTIALS = None
+
+CSV_URL = os.getenv("CSV_URL")
 
 
 # 🔹 Adicionar um novo registro na planilha
@@ -488,46 +487,31 @@ async def listar_escolas(update: Update, context):
         await update.message.reply_text("❌ Erro ao buscar lista de escolas.")
 
 # 🔹 Função para rodar o Bot do Telegram corretamente
+# 🔹 Função para rodar o Bot do Telegram corretamente
 async def iniciar_bot():
-    try:
-        logging.info("🤖 Iniciando o bot do Telegram...")
-        app_telegram = Application.builder().token(TELEGRAM_TOKEN).build()
+    logging.info("🤖 Iniciando o bot do Telegram...")
+    
+    app_telegram = Application.builder().token(TELEGRAM_TOKEN).build()
 
-        # 🔹 Adicionar comandos ao bot
-        app_telegram.add_handler(CommandHandler("start", start))
-        app_telegram.add_handler(CommandHandler("ajuda", ajuda))
-        app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
-        app_telegram.add_handler(CommandHandler("listarescolas", listar_escolas))
+    # 🔹 Adicionar comandos ao bot
+    app_telegram.add_handler(CommandHandler("start", start))
+    app_telegram.add_handler(CommandHandler("ajuda", ajuda))
+    app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
+    app_telegram.add_handler(CommandHandler("listarescolas", listar_escolas))
 
-        # 🔹 Iniciar atualização da planilha em segundo plano
-        asyncio.create_task(atualizar_planilha_periodicamente())
+    # 🔹 Iniciar atualização da planilha em segundo plano
+    asyncio.create_task(atualizar_planilha_periodicamente())
 
-        logging.info("✅ Bot do Telegram iniciado com sucesso!")
-        await app_telegram.run_polling()
+    logging.info("✅ Bot do Telegram iniciado com sucesso!")
+    await app_telegram.run_polling()
 
-    except Exception as e:
-        logging.error(f"❌ ERRO CRÍTICO no bot do Telegram: {e}")
-
+# 🔹 Inicialização segura do Flask e do Bot
 if __name__ == "__main__":
-    import asyncio  # Importa asyncio corretamente
+    # 🔹 Iniciar o servidor Flask em uma thread separada
+    threading.Thread(target=iniciar_servidor, daemon=True).start()
 
-    # 🔹 Rodar o Flask em uma thread separada
-    flask_thread = threading.Thread(target=iniciar_servidor, daemon=True)
-    flask_thread.start()
-
-    # 🔹 Rodar o ping para manter o bot online
+    # 🔹 Rodar o ping para manter o Render online
     threading.Thread(target=manter_online, daemon=True).start()
 
-    # 🔹 Iniciar o loop de eventos do asyncio corretamente
-    loop = asyncio.get_event_loop()
-
-    try:
-        # 🔹 Criar a tarefa assíncrona para rodar o bot do Telegram
-        loop.create_task(iniciar_bot())
-
-        # 🔹 Mantém o loop rodando indefinidamente
-        loop.run_forever()
-    except KeyboardInterrupt:
-        logging.info("🛑 Bot interrompido manualmente.")
-    except Exception as e:
-        logging.error(f"❌ ERRO CRÍTICO no bot do Telegram: {e}")
+    # 🔹 Criar o loop de eventos do asyncio e rodar o bot corretamente
+    asyncio.run(iniciar_bot())
