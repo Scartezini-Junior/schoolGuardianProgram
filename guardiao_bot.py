@@ -24,8 +24,6 @@ def home():
 def iniciar_servidor():
     app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)  # A porta pode ser qualquer uma
 
-# Iniciar o servidor Flask antes do bot
-threading.Thread(target=iniciar_servidor, daemon=True).start()
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -474,26 +472,27 @@ async def listar_escolas(update: Update, context):
 
 # 🔹 Função para iniciar o bot
 async def iniciar_bot():
-    while True:  # 🔄 Garante que o bot não pare mesmo se der erro
-        try:
-            app = Application.builder().token(TELEGRAM_TOKEN).build()
+    try:
+        app_telegram = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
 
-            # 🔹 Adicionar comandos ao bot
-            app.add_handler(CommandHandler("start", start))
-            app.add_handler(CommandHandler("ajuda", ajuda))
-            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
-            app.add_handler(CommandHandler("listarescolas", listar_escolas))
+        # 🔹 Adicionar comandos ao bot
+        app_telegram.add_handler(CommandHandler("start", start))
+        app_telegram.add_handler(CommandHandler("ajuda", ajuda))
+        app_telegram.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
+        app_telegram.add_handler(CommandHandler("listarescolas", listar_escolas))
 
-            # 🔹 Iniciar a atualização da planilha em segundo plano
-            asyncio.create_task(atualizar_planilha_periodicamente())
+        # 🔹 Iniciar atualização da planilha em segundo plano
+        asyncio.create_task(atualizar_planilha_periodicamente())
 
-            print("✅ Bot iniciado e rodando sem parar!")
-            await app.run_polling()
+        print("✅ Bot do Telegram iniciado!")
+        await app_telegram.run_polling()
 
-        except Exception as e:
-            logging.error(f"❌ Erro crítico! Reiniciando o bot... Erro: {e}")
-            await asyncio.sleep(5)  # 🔄 Aguarda 5s antes de tentar reiniciar
+    except Exception as e:
+        logging.error(f"❌ Erro crítico ao rodar o bot: {e}")
+
+# 🔹 Iniciar o Flask em uma thread separada
+threading.Thread(target=iniciar_servidor, daemon=True).start()
 
 # 🔹 Garantir que o script só rode quando chamado diretamente
 if __name__ == "__main__":
-    asyncio.run(iniciar_bot())
+    asyncio.run(iniciar_bot())  # ⚠️ Agora rodando corretamente sem conflito
