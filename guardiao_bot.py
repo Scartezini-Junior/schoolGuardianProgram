@@ -15,6 +15,9 @@ from flask import Flask
 import threading
 import time
 
+# 🔹 Configuração de logs detalhados
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 # Criando um servidor Flask Fake para manter o Render "feliz"
 app = Flask(__name__)
 
@@ -22,11 +25,23 @@ app = Flask(__name__)
 def home():
     return "Bot está rodando!"
 
-# Rodando o servidor Flask em uma thread separada
+# 🔹 Iniciar Flask em uma thread separada
 def iniciar_servidor():
-    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)  # A porta pode ser qualquer uma
+    logging.info("🌐 Iniciando o servidor Flask...")
+    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
+# 🔹 Ping para manter o Render ativo
+RENDER_URL = "https://schoolguardianprogram.onrender.com"  # 🚀 ALTERE AQUI COM SUA URL REAL
 
+def manter_online():
+    while True:
+        try:
+            requests.get(RENDER_URL)
+            logging.info("✅ Ping enviado para manter a instância ativa.")
+        except Exception as e:
+            logging.error(f"⚠️ Erro ao enviar ping: {e}")
+        time.sleep(600)  # ⏳ Aguarda 10 minutos antes do próximo ping
 
+# 🔹 Configuração de autenticação do Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # 🔹 Ler TELEGRAM_TOKEN
@@ -45,8 +60,6 @@ if GOOGLE_CREDENTIALS_JSON:
 else:
     GOOGLE_CREDENTIALS = None
 
-# 🔹 Ping para manter o Render ativo
-RENDER_URL = "https://schoolguardianprogram.onrender.com"  # 🚀 ALTERE AQUI COM SUA URL REAL
 
 # 🔹 Adicionar um novo registro na planilha
 def adicionar_escola(user_id, nome, funcao, escola, telefone, email, endereco, localizacao, nome_aba="Escolas"):
@@ -474,22 +487,11 @@ async def listar_escolas(update: Update, context):
     except Exception as e:
         await update.message.reply_text("❌ Erro ao buscar lista de escolas.")
 
-def manter_online():
-    while True:
-        try:
-            requests.get(RENDER_URL)
-            print("✅ Ping enviado para manter a instância ativa.")
-        except Exception as e:
-            print(f"⚠️ Erro ao enviar ping: {e}")
-        time.sleep(600)  # ⏳ Aguarda 10 minutos antes do próximo ping
-
-# 🔹 Iniciar o ping em uma thread separada
-threading.Thread(target=manter_online, daemon=True).start()
-
 # 🔹 Função para rodar o Bot do Telegram corretamente
 async def iniciar_bot():
     try:
-        app_telegram = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
+        logging.info("🤖 Iniciando o bot do Telegram...")
+        app_telegram = Application.builder().token(TELEGRAM_TOKEN).build()
 
         # 🔹 Adicionar comandos ao bot
         app_telegram.add_handler(CommandHandler("start", start))
@@ -500,17 +502,21 @@ async def iniciar_bot():
         # 🔹 Iniciar atualização da planilha em segundo plano
         asyncio.create_task(atualizar_planilha_periodicamente())
 
-        print("✅ Bot do Telegram iniciado!")
+        logging.info("✅ Bot do Telegram iniciado com sucesso!")
         await app_telegram.run_polling()
 
     except Exception as e:
-        logging.error(f"❌ Erro crítico ao rodar o bot: {e}")
+        logging.error(f"❌ ERRO CRÍTICO no bot do Telegram: {e}")
 
-# 🔹 Executar Flask e Telegram Bot separadamente
+# 🔹 Executar Flask e Telegram Bot sem erro de asyncio.run()
 if __name__ == "__main__":
     # 🔹 Rodar o Flask em uma thread separada
     flask_thread = threading.Thread(target=iniciar_servidor, daemon=True)
     flask_thread.start()
 
-    # 🔹 Rodar o bot do Telegram no processo principal
-    asyncio.run(iniciar_bot())
+    # 🔹 Rodar o ping para manter o bot online
+    threading.Thread(target=manter_online, daemon=True).start()
+
+    # 🔹 Iniciar o loop do asyncio corretamente
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(iniciar_bot())
