@@ -13,6 +13,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Callbac
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from flask import Flask
 import threading
+
 # Criando um servidor Flask Fake para manter o Render "feliz"
 app = Flask(__name__)
 
@@ -470,7 +471,7 @@ async def listar_escolas(update: Update, context):
         await update.message.reply_text("❌ Erro ao buscar lista de escolas.")
 
 
-# 🔹 Função para iniciar o bot
+# 🔹 Função para rodar o Bot do Telegram corretamente
 async def iniciar_bot():
     try:
         app_telegram = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
@@ -490,10 +491,11 @@ async def iniciar_bot():
     except Exception as e:
         logging.error(f"❌ Erro crítico ao rodar o bot: {e}")
 
-# 🔹 Iniciar o Flask em uma thread separada
-threading.Thread(target=iniciar_servidor, daemon=True).start()
-
-# 🔹 Garantir que o script só rode quando chamado diretamente
+# 🔹 Executar Flask e Telegram Bot separadamente
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(iniciar_bot())  # 🚀 Correção do loop de eventos
+    # 🔹 Rodar o Flask em uma thread separada
+    flask_thread = threading.Thread(target=iniciar_servidor, daemon=True)
+    flask_thread.start()
+
+    # 🔹 Rodar o bot do Telegram no processo principal
+    asyncio.run(iniciar_bot())
