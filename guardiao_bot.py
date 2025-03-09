@@ -4,6 +4,7 @@ import csv
 import threading
 import time
 import unicodedata
+import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
 
@@ -58,7 +59,7 @@ def exibir_erro(mensagem):
             print(f"❌ Falha ao notificar admin ({admin_id}): {e}")
 
 # Função para exibir a mensagem de boas-vindas
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: CallbackContext):
     mensagem_boas_vindas = (
         "👋 *Bem-vindo ao Guardião Escolar!*\n\n"
         "Este Canal é utilizado para comunicação rápida e eficaz em situações de emergência. "
@@ -74,10 +75,10 @@ def start(update: Update, context: CallbackContext):
         "2️⃣ *Envie os detalhes do ocorrido*, incluindo:\n"
         "- Localização exata\n- Número de envolvidos\n- Estado das vítimas\n- Meios utilizados pelo agressor."
     )
-    update.message.reply_text(mensagem_boas_vindas, parse_mode='Markdown')
+    await update.message.reply_text(mensagem_boas_vindas, parse_mode='Markdown')
 
 # Função para exibir a ajuda
-def ajuda(update: Update, context: CallbackContext):
+async def ajuda(update: Update, context: CallbackContext):
     mensagem_ajuda = (
         "📋 *Como usar o Guardião Escolar:*\n\n"
         "1️⃣ *Envie uma mensagem contendo a palavra-chave*, seguida dos detalhes do ocorrido.\n"
@@ -88,7 +89,7 @@ def ajuda(update: Update, context: CallbackContext):
         "- Meios utilizados pelo agressor\n\n"
         "⚠️ *Importante*: Mantenha-se seguro e envie as informações apenas se isso não colocar sua segurança em risco."
     )
-    update.message.reply_text(mensagem_ajuda, parse_mode='Markdown')
+   await update.message.reply_text(mensagem_ajuda, parse_mode='Markdown')
 
 # 🔹 Funções específicas para cada comando
 def bomba(update: Update, context: CallbackContext):
@@ -144,7 +145,7 @@ def cadastro(update: Update, context: CallbackContext):
             print(f"❌ Erro ao enviar notificação de cadastro para {admin_id}: {e}")
 
 # 🔹 Função principal de emergência e notificações
-def comando_emergencia(update: Update, context: CallbackContext, tipo: str):
+async def comando_emergencia(update: Update, context: CallbackContext, tipo: str):
     global emergencia_ativa
     chat_id = str(update.message.chat_id)
     texto = update.message.text
@@ -157,7 +158,7 @@ def comando_emergencia(update: Update, context: CallbackContext, tipo: str):
             "Favor entrar em contato com o 190 em caso de emergência.\n\n"
             "Caso tenha interesse em se cadastrar, envie a mensagem \"CADASTRO\"."
         )
-        update.message.reply_text(mensagem_nao_autorizada, parse_mode='Markdown')
+        await update.message.reply_text(mensagem_nao_autorizada, parse_mode='Markdown')
 
         # ✅ Enviar notificação para os administradores com os dados do novo usuário
         mensagem_admin = (
@@ -183,7 +184,7 @@ def comando_emergencia(update: Update, context: CallbackContext, tipo: str):
     print(f"⚠️ Emergência ativada: {tipo.upper()} para {dados_escola['Escola']}")
 
     # ✅ Confirmação para o usuário
-    update.message.reply_text(
+    await update.message.reply_text(
         f"Mensagem Recebida. Identificamos que vocês estão em situação de emergência envolvendo {tipo.lower()}, o Guardião Escolar foi ativado e em breve uma equipe chegará ao seu local. "
         "Mantenha-se em segurança e, se possível, envie uma nova mensagem com mais detalhes sobre o que está acontecendo, quantos envolvidos, meios utilizados e se há alguém necessitando de suporte médico."
     )
@@ -213,7 +214,7 @@ def comando_emergencia(update: Update, context: CallbackContext, tipo: str):
     emergencia_ativa = False  # Finaliza a emergência
 
 # 🔹 Função para lidar com mensagens de emergência enviadas como texto livre
-def mensagem_recebida(update: Update, context: CallbackContext):
+async def mensagem_recebida(update: Update, context: CallbackContext):
     global emergencia_ativa  # Controle de emergência
     try:
         chat_id = str(update.message.chat_id)
@@ -227,7 +228,7 @@ def mensagem_recebida(update: Update, context: CallbackContext):
                 "Favor entrar em contato com o 190 em caso de emergência.\n\n"
                 "Caso tenha interesse em se cadastrar, envie a mensagem \"CADASTRO\"."
             )
-            update.message.reply_text(mensagem_nao_autorizada, parse_mode='Markdown')
+            await update.message.reply_text(mensagem_nao_autorizada, parse_mode='Markdown')
 
             # ✅ Enviar notificação para os administradores com os dados do novo usuário
             mensagem_admin = (
@@ -258,7 +259,7 @@ def mensagem_recebida(update: Update, context: CallbackContext):
                 print(f"⚠️ Emergência ativada: {palavra.upper()} para {dados_escola['Escola']}")
 
                 # ✅ Confirmação para o usuário
-                update.message.reply_text(
+                await update.message.reply_text(
                     f"Mensagem Recebida. Identificamos que vocês estão em situação de emergência envolvendo {palavra.lower()}, o Guardião Escolar foi ativado e em breve uma equipe chegará ao seu local. "
                     "Mantenha-se em segurança e, se possível, envie uma nova mensagem com mais detalhes sobre o que está acontecendo, quantos envolvidos, meios utilizados e se há alguém necessitando de suporte médico."
                 )
@@ -299,7 +300,7 @@ def mensagem_recebida(update: Update, context: CallbackContext):
                 "lembre-se de inserir a palavra-chave correspondente e incluir o máximo de detalhes possível.\n"
                 "📞 Inclua também um número de contato para que possamos falar com você."
             )
-            update.message.reply_text(mensagem_erro)
+            await update.message.reply_text(mensagem_erro)
 
     except Exception as e:
         emergencia_ativa = False
@@ -433,7 +434,7 @@ def monitorar_conexao(context=None):
         time.sleep(60)  # Verifica a cada 60 segundos
 
 # 🔹 Função para iniciar o bot no servidor
-def iniciar_bot():
+async def iniciar_bot():
     """
     Inicializa o bot do Telegram, configura os handlers e inicia threads essenciais.
     """
@@ -467,8 +468,8 @@ def iniciar_bot():
     print("✅ Guardião Escolar está rodando! Aguardando mensagens...")
     
     # Iniciar o bot
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    await application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-    iniciar_bot()  # Iniciar o bot normalmente
+    asyncio.run(iniciar_bot())  # Iniciar o bot normalmente
