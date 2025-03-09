@@ -4,7 +4,6 @@ import csv
 import threading
 import time
 import unicodedata
-import socket
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
 
