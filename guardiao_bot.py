@@ -392,5 +392,7 @@ if __name__ == "__main__":
     # 🔹 Iniciar o servidor Flask em uma thread separada
     threading.Thread(target=iniciar_servidor, daemon=True).start()
 
-    # 🔹 Se o Render já está rodando um loop de eventos, chamamos `main()` diretamente
-    asyncio.get_event_loop().run_until_complete(main())
+    # 🔹 Iniciar o bot assíncrono corretamente no Render
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())  # Usa create_task() para evitar conflito com o loop do Render
+    loop.run_forever()  # Mantém o loop ativo sem conflitos
