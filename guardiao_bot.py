@@ -392,5 +392,5 @@ if __name__ == "__main__":
     # 🔹 Iniciar o servidor Flask em uma thread separada
     threading.Thread(target=iniciar_servidor, daemon=True).start()
 
-    # 🔹 Iniciar o bot assíncrono
-    asyncio.run(main())
+    # 🔹 Se o Render já está rodando um loop de eventos, chamamos `main()` diretamente
+    asyncio.get_event_loop().run_until_complete(main())
