@@ -33,8 +33,8 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # 🔹 Ler ADMIN_USER_IDS e converter para lista
-ADMIN_USER_IDS = os.getenv("ADMIN_USER_IDS", "").split(",")
-ADMIN_USER_IDS = [x.strip() for x in ADMIN_USER_IDS]  # Remove espaços extras
+ADMIN_USER_IDS = os.getenv("ADMIN_USER_IDS", "").strip("[]").replace('"', '').split(",")
+ADMIN_USER_IDS = [x.strip() for x in ADMIN_USER_IDS if x.strip()]
 
 # 🔹 Ler GOOGLE_CREDENTIALS_JSON corretamente
 GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
