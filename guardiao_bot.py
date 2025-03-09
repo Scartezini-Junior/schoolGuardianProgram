@@ -403,8 +403,6 @@ def tocar_som(tipo, context=None):
         except Exception as e:
             print(f"❌ Erro ao enviar áudio para {admin_id}: {e}")
 
-import threading
-
 # 🔹 Função para atualizar a planilha a cada 5 minutos em uma thread separada
 def atualizar_planilha_periodicamente():
     """
@@ -417,9 +415,6 @@ def atualizar_planilha_periodicamente():
         except Exception as e:
             print(f"❌ Erro ao atualizar a planilha: {e}")
         time.sleep(300)  # 300 segundos = 5 minutos
-
-# Iniciar a atualização da planilha em uma thread separada
-threading.Thread(target=atualizar_planilha_periodicamente, daemon=True).start()
 
 # 🔹 Função para monitorar a conexão com a internet e alertar os administradores
 def monitorar_conexao(context=None):
@@ -437,13 +432,6 @@ def monitorar_conexao(context=None):
         except Exception as e:
             print(f"❌ Erro no monitoramento da conexão: {e}")
         time.sleep(60)  # Verifica a cada 60 segundos
-
-# Iniciar o monitoramento da conexão em uma thread separada
-threading.Thread(target=monitorar_conexao, args=(application.bot,), daemon=True).start()
-
-
-
-import threading
 
 # 🔹 Função para iniciar o bot no servidor
 def iniciar_bot():
