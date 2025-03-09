@@ -7,17 +7,6 @@ import unicodedata
 import socket
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext, filters
-from flask import Flask
-
-# Criar um servidor Flask para enganar o Render
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot do Telegram rodando!"
-
-def iniciar_servidor():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
 
 # Configurações
@@ -479,9 +468,8 @@ def iniciar_bot():
     print("✅ Guardião Escolar está rodando! Aguardando mensagens...")
     
     # Iniciar o bot
-    application.run_polling()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-    threading.Thread(target=iniciar_servidor, daemon=True).start()  # Iniciar o servidor Flask
     iniciar_bot()  # Iniciar o bot normalmente
