@@ -508,18 +508,26 @@ async def iniciar_bot():
     except Exception as e:
         logging.error(f"❌ ERRO CRÍTICO no bot do Telegram: {e}")
 
-# 🔹 Executar Flask e Telegram Bot sem erro de asyncio.run()
 if __name__ == "__main__":
-    import asyncio    # 🔹 Rodar o Flask em uma thread separada
+    import asyncio  # Importa asyncio corretamente
+
+    # 🔹 Rodar o Flask em uma thread separada
     flask_thread = threading.Thread(target=iniciar_servidor, daemon=True)
     flask_thread.start()
 
     # 🔹 Rodar o ping para manter o bot online
     threading.Thread(target=manter_online, daemon=True).start()
 
-    # 🔹 Iniciar o loop do asyncio corretamente
+    # 🔹 Iniciar o loop de eventos do asyncio corretamente
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(iniciar_bot())
 
-    # 🔹 Mantém o processo rodando
-    loop.run_forever()
+    try:
+        # 🔹 Criar a tarefa assíncrona para rodar o bot do Telegram
+        loop.create_task(iniciar_bot())
+
+        # 🔹 Mantém o loop rodando indefinidamente
+        loop.run_forever()
+    except KeyboardInterrupt:
+        logging.info("🛑 Bot interrompido manualmente.")
+    except Exception as e:
+        logging.error(f"❌ ERRO CRÍTICO no bot do Telegram: {e}")
