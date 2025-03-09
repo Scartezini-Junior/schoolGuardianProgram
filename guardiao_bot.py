@@ -14,29 +14,36 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-# 🔹 Carregar credenciais do JSON armazenado no Render
+# 🔹 Ler TELEGRAM_TOKEN
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+# 🔹 Ler ADMIN_USER_IDS e converter para lista
+ADMIN_USER_IDS = os.getenv("ADMIN_USER_IDS", "").split(",")
+ADMIN_USER_IDS = [x.strip() for x in ADMIN_USER_IDS]  # Remove espaços extras
+
+# 🔹 Ler GOOGLE_CREDENTIALS_JSON corretamente
 GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
 
-try:
+# 🔹 Garantir que o JSON seja interpretado corretamente
+if GOOGLE_CREDENTIALS_JSON:
     GOOGLE_CREDENTIALS = json.loads(GOOGLE_CREDENTIALS_JSON)
-    creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
-except json.JSONDecodeError:
-    raise ValueError("❌ Erro: JSON de credenciais malformado.")
+else:
+    GOOGLE_CREDENTIALS = None
 
 # 🔹 Adicionar um novo registro na planilha
-def adicionar_escola(chat_id, nome, funcao, escola, telefone, email, endereco, localizacao, nome_aba="Escolas"):
+def adicionar_escola(user_id, nome, funcao, escola, telefone, email, endereco, localizacao, nome_aba="Escolas"):
     try:
         planilha = conectar_planilha()
         aba = planilha.worksheet(nome_aba)
 
-        # 🚨 Verifica se já existe esse Chat ID
+        # 🚨 Verifica se já existe esse User ID
         registros = aba.get_all_records()
         for registro in registros:
-            if str(registro["Chat ID"]) == str(chat_id):
+            if str(registro["User ID"]) == str(user_id):  # ✅ CORRETO
                 print("⚠️ Escola já cadastrada.")
                 return False
 
-        nova_linha = [chat_id, nome, funcao, escola, telefone, email, endereco, localizacao]
+        nova_linha = [user_id, nome, funcao, escola, telefone, email, endereco, localizacao]
         linha_vazia = len(aba.get_all_values()) + 1
         aba.insert_row(nova_linha, linha_vazia)
 
@@ -47,7 +54,7 @@ def adicionar_escola(chat_id, nome, funcao, escola, telefone, email, endereco, l
         return False
 
 # 🔹 Atualizar dados de uma escola existente
-async def atualizar_escola(update: Update, context, chat_id, coluna, novo_valor, nome_aba="Escolas"):
+async def atualizar_escola(update: Update, context, user_id, coluna, novo_valor, nome_aba="Escolas"):
     try:
         planilha = conectar_planilha()
         aba = planilha.worksheet(nome_aba)
@@ -62,17 +69,17 @@ async def atualizar_escola(update: Update, context, chat_id, coluna, novo_valor,
             print(f"⚠️ Erro: Coluna '{coluna}' não encontrada na planilha '{nome_aba}'.")
             return False
 
-        # 🚨 Atualiza os dados se encontrar o Chat ID correspondente
+        # 🚨 Atualiza os dados se encontrar o User ID correspondente
         for idx, registro in enumerate(registros, start=2):
-            if str(registro.get("Chat ID", "")) == str(chat_id):  # Usa .get() para evitar KeyError
+            if str(registro.get("User ID", "")) == str(user_id):  # Usa .get() para evitar KeyError
                 aba.update_cell(idx, colunas.index(coluna) + 1, novo_valor)
                 await update.message.reply_text(f"✅ {coluna} atualizado para {novo_valor}.")
-                print(f"✅ Atualização bem-sucedida: {coluna} do Chat ID {chat_id} atualizado para {novo_valor}.")
+                print(f"✅ Atualização bem-sucedida: {coluna} do User ID {user_id} atualizado para {novo_valor}.")
                 return True
 
-        # 🚨 Se não encontrar o Chat ID
-        await update.message.reply_text("⚠️ Chat ID não encontrado.")
-        print(f"⚠️ Erro: Chat ID {chat_id} não encontrado na planilha '{nome_aba}'.")
+        # 🚨 Se não encontrar o User ID
+        await update.message.reply_text("⚠️ User ID não encontrado.")
+        print(f"⚠️ Erro: User ID {user_id} não encontrado na planilha '{nome_aba}'.")
         return False
 
     except Exception as e:
@@ -81,19 +88,19 @@ async def atualizar_escola(update: Update, context, chat_id, coluna, novo_valor,
         return False
 
 # 🔹 Remover uma escola da planilha
-async def remover_escola(update: Update, context, chat_id, nome_aba="Escolas"):
+async def remover_escola(update: Update, context, user_id, nome_aba="Escolas"):
     try:
         planilha = conectar_planilha()
         aba = planilha.worksheet(nome_aba)
         
         registros = aba.get_all_records()
         for idx, registro in enumerate(registros, start=2):
-            if str(registro["Chat ID"]) == str(chat_id):
+            if str(registro["User ID"]) == str(user_id):
                 aba.delete_rows(idx)
-                await update.message.reply_text(f"✅ Escola com Chat ID {chat_id} removida.")
+                await update.message.reply_text(f"✅ Escola com User ID {user_id} removida.")
                 return True  # Sucesso
 
-        await update.message.reply_text("⚠️ Chat ID não encontrado.")
+        await update.message.reply_text("⚠️ User ID não encontrado.")
         return False  # Falha
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao remover escola: {e}")
@@ -119,43 +126,6 @@ def obter_administradores():
     except Exception as e:
         print(f"❌ Erro ao obter administradores: {e}")
         return []
-
-# 🔹 Função para adicionar um administrador
-def adicionar_admin(chat_id):
-    try:
-        planilha = conectar_planilha()
-        aba = planilha.worksheet("Administradores")
-
-        admins = obter_administradores()
-        if str(chat_id) in admins:
-            print(f"⚠️ Administrador {chat_id} já está cadastrado.")
-            return False
-
-        aba.append_row([chat_id])
-        print(f"✅ Novo administrador adicionado: {chat_id}")
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao adicionar administrador: {e}")
-        return False
-
-# 🔹 Função para remover um administrador
-def remover_admin(chat_id):
-    try:
-        planilha = conectar_planilha()
-        aba = planilha.worksheet("Administradores")
-        registros = aba.get_all_values()
-
-        for idx, linha in enumerate(registros, start=1):
-            if str(linha[0]) == str(chat_id):
-                aba.delete_rows(idx)
-                print(f"✅ Administrador {chat_id} removido.")
-                return True
-
-        print("⚠️ Administrador não encontrado.")
-        return False
-    except Exception as e:
-        print(f"❌ Erro ao remover administrador: {e}")
-        return False
 
 # 🔹 Variáveis globais
 dados_planilha = []
@@ -215,12 +185,12 @@ def exibir_erro(mensagem):
     print(f"❌ ERRO: {mensagem}")  
 
 # 🔹 Função para buscar dados da escola pelo ID do chat
-def buscar_dados_escola(chat_id):
+def buscar_dados_escola(user_id):
     try:
         for linha in dados_planilha:
-            if str(linha.get('Chat ID', '')) == str(chat_id):  # Evita erro caso a chave 'Chat ID' não exista
+            if str(linha.get('User ID', '')) == str(user_id):  # Evita erro caso a chave 'User ID' não exista
                 return linha
-        print(f"⚠️ Chat ID {chat_id} não encontrado.")
+        print(f"⚠️ User ID {user_id} não encontrado.")
         return None
     except Exception as e:
         print(f"❌ Erro ao buscar dados da escola: {e}")  
@@ -230,14 +200,22 @@ async def mensagem_recebida(update: Update, context):
     """Processa mensagens recebidas e identifica emergências."""
     global emergencia_ativa  
     try:
-        chat_id = str(update.message.chat_id)
+        user_id = str(update.message.from_user.id)
         texto = update.message.text.strip()  # Remove espaços extras
-        dados_escola = buscar_dados_escola(chat_id)
+        dados_escola = buscar_dados_escola(user_id)
 
-        # 🔹 Verifica se o Chat ID está cadastrado
+        # 🔹 Verifica se o User ID está cadastrado
         if not dados_escola:
-            await processar_novo_usuario(update, context)
-            return  # Finaliza para evitar processamento extra
+                if texto.upper() == "CADASTRO":
+                    await notificar_admin_solicitacao_cadastro(update)
+                else:
+                    await update.message.reply_text(
+                        "⚠️ *Canal exclusivo para as Instituições de Ensino cadastradas.*\n"
+                        "*Favor entrar em contato com o 190 em caso de emergência.*\n"
+                        "*Caso tenha interesse em se cadastrar, envie a mensagem \"CADASTRO\".*",
+                        parse_mode='Markdown'
+                    )
+                return  # Bloqueia qualquer outra ação para usuários não cadastrados
 
         # 🔹 Normaliza o texto recebido
         texto_normalizado = normalizar_texto(texto)
@@ -266,13 +244,13 @@ async def mensagem_recebida(update: Update, context):
                 f"🌐 *Localização*: {dados_escola.get('Localização', 'Não informado')}\n\n"
                 f"📩 *Mensagem original*: {texto}\n"
                 f"👤 *Usuário*: @{update.message.from_user.username or 'Sem username'} "
-                f"(Nome: {update.message.from_user.first_name}, Chat ID: {chat_id})"
+                f"(Nome: {update.message.from_user.first_name}, User ID: {user_id})"
             )
 
             # 🔹 Enviar mensagem detalhada para todos os administradores
             await asyncio.gather(*[
                 context.bot.send_message(chat_id=admin_id, text=mensagem_para_admins, parse_mode='Markdown')
-                for admin_id in ADMIN_CHAT_IDS
+                for admin_id in ADMIN_USER_IDS
             ])
 
             emergencia_ativa = False  # Finaliza a emergência
@@ -289,7 +267,31 @@ async def mensagem_recebida(update: Update, context):
 
     except Exception as e:
         emergencia_ativa = False  # Garante que o estado não fique preso em True
-        logging.exception(f"❌ Erro ao processar a mensagem recebida (Chat ID: {chat_id}): {e}")
+        logging.exception(f"❌ Erro ao processar a mensagem recebida (User ID: {user_id}): {e}")
+
+async def notificar_admin_solicitacao_cadastro(update: Update):
+    user_id = str(update.message.from_user.id)
+    first_name = update.message.from_user.first_name or "Não informado"
+    last_name = update.message.from_user.last_name or "Não informado"
+    telefone = update.message.contact.phone_number if update.message.contact else "Não informado"
+
+    mensagem = (
+        f"👤 *Novo pedido de cadastro*\n"
+        f"📌 *ID*: {user_id}\n"
+        f"👤 *Nome*: {first_name} {last_name}\n"
+        f"📞 *Telefone*: {telefone}\n\n"
+        f"Para aprovar este usuário, utilize o comando:\n"
+        f"`/cadastrar {user_id};<Nome>;<Função>;<Escola>;<Telefone>;<Email>;<Endereço>;<Localização>`"
+    )
+
+    # 🔹 Enviar para todos os administradores
+    await asyncio.gather(*[
+        update.get_bot().send_message(chat_id=admin_id, text=mensagem, parse_mode='Markdown')
+        for admin_id in obter_administradores()
+    ])
+
+    await update.message.reply_text("📌 Sua solicitação foi enviada para análise.")
+
 
 # 🔹 Função para enviar alerta e tocar áudio no Telegram
 async def enviar_alerta(context, dados_escola, tipo, detalhes):
@@ -318,7 +320,7 @@ async def enviar_alerta(context, dados_escola, tipo, detalhes):
         except Exception as e:
             logging.error(f"❌ Erro ao enviar alerta para {admin_id}: {e}")
 
-    await asyncio.gather(*[enviar_para_admin(admin_id) for admin_id in ADMIN_CHAT_IDS])
+    await asyncio.gather(*[enviar_para_admin(admin_id) for admin_id in ADMIN_USER_IDS])
 
 # 🔹 Função para processar novos usuários e enviar para os administradores com botões interativos
 async def enviar_alerta(context, dados_escola, tipo, detalhes):
@@ -347,34 +349,35 @@ async def enviar_alerta(context, dados_escola, tipo, detalhes):
         except Exception as e:
             logging.error(f"❌ Erro ao enviar alerta para {admin_id}: {e}")
 
-    await asyncio.gather(*[enviar_para_admin(admin_id) for admin_id in ADMIN_CHAT_IDS])
+    await asyncio.gather(*[enviar_para_admin(admin_id) for admin_id in ADMIN_USER_IDS])
 
 # 🔹 Função para lidar com a escolha do administrador
 async def callback_handler(update: Update, context):
     query: CallbackQuery = update.callback_query
     query_data = query.data
-    chat_id = query.message.chat_id
+    user_id = str(query.from_user.id)  # ✅ Pegando corretamente o ID do usuário
 
-    if str(chat_id) not in ADMIN_CHAT_IDS:
+    # 🚨 Verifica se o usuário tem permissão (se é administrador)
+    if user_id not in ADMIN_USER_IDS:
         await query.answer("⚠️ Você não tem permissão para executar esta ação.", show_alert=True)
         return
 
     if query_data.startswith("aprovar_"):
-        chat_id = query_data.split("_")[1]
-        usuario = cadastros_pendentes.pop(chat_id, None)
+        user_id_aprovado = query_data.split("_")[1]  # Pegando o ID do usuário a ser aprovado
+        usuario = cadastros_pendentes.pop(user_id_aprovado, None)
 
         if usuario:
             await query.edit_message_text(
                 text=f"✅ *Usuário {usuario['Nome']} aprovado!* Agora, envie os dados adicionais no formato:\n\n"
-                     "`/cadastrar <ChatID>;<Nome>;<Função>;<Escola>;<Telefone>;<Email>;<Endereço>;<Localização Google Maps>`",
+                     "`/cadastrar <UserID>;<Nome>;<Função>;<Escola>;<Telefone>;<Email>;<Endereço>;<Localização Google Maps>`",
                 parse_mode="Markdown"
             )
         else:
             await query.edit_message_text("⚠️ Usuário já foi processado ou não encontrado.")
 
     elif query_data.startswith("rejeitar_"):
-        chat_id = query_data.split("_")[1]
-        usuario = cadastros_pendentes.pop(chat_id, None)
+        user_id_rejeitado = query_data.split("_")[1]  # Pegando o ID do usuário a ser rejeitado
+        usuario = cadastros_pendentes.pop(user_id_rejeitado, None)
 
         if usuario:
             await query.edit_message_text(f"❌ *Usuário {usuario['Nome']} foi rejeitado e não será cadastrado.*")
@@ -383,101 +386,96 @@ async def callback_handler(update: Update, context):
 
 # 🔹 Função para cadastrar um novo usuário na planilha
 async def cadastrar(update: Update, context):
-    try:
-        dados = " ".join(context.args)
-        campos = dados.split(";")
-
-        if len(campos) != 8:
-            await update.message.reply_text("⚠️ Formato inválido! Use `/cadastrar <ChatID>;<Nome>;<Função>;<Escola>;<Telefone>;<Email>;<Endereço>;<Link Google Maps>`")
-            return
-
-        chat_id, nome, funcao, escola, telefone, email, endereco, localizacao = campos
-
-        # 🔹 Agora usamos a função correta para adicionar à planilha
-        sucesso = adicionar_escola(chat_id, nome, funcao, escola, telefone, email, endereco, localizacao)
-
-        if sucesso:
-            await update.message.reply_text(f"✅ *Usuário {nome} cadastrado com sucesso!*", parse_mode="Markdown")
-            print(f"✅ Novo cadastro adicionado: {nome}")
-        else:
-            await update.message.reply_text("❌ Erro ao salvar os dados na planilha.")
-            print(f"❌ Erro ao salvar o usuário {nome} na planilha.")
-
-    except Exception as e:
-        await update.message.reply_text("❌ Erro ao processar o cadastro.")
-        logging.error(f"❌ Erro ao cadastrar novo usuário: {e}")
-
-# 🔹 Função para adicionar um novo administrador
-async def add_admin(update: Update, context):
-    if len(context.args) != 1:
-        await update.message.reply_text("⚠️ Uso correto: `/addadmin <ChatID>`")
-        return
-
-    novo_admin = context.args[0]
-
-    # Verifica se já está cadastrado
     administradores = obter_administradores()
-    if novo_admin in administradores:
-        await update.message.reply_text("⚠️ Este usuário já é um administrador.")
+    
+    # 🔹 Verifica se quem está cadastrando é um administrador
+    if str(update.message.from_user.id) not in administradores:
+        await update.message.reply_text("⚠️ Apenas administradores podem cadastrar novas escolas.")
         return
 
-    # Adiciona na planilha
-    sucesso = adicionar_admin(novo_admin)
+    dados = " ".join(context.args)
+    campos = dados.split(";")
+
+    if len(campos) != 8:
+        await update.message.reply_text("⚠️ Formato inválido! Use:\n"
+                                        "`/cadastrar <UserID>;<Nome>;<Função>;<Escola>;<Telefone>;<Email>;<Endereço>;<Localização>`",
+                                        parse_mode="Markdown")
+        return
+
+    user_id, nome, funcao, escola, telefone, email, endereco, localizacao = campos
+
+    # 🚨 Bloquear cadastro duplicado
+    if buscar_dados_escola(user_id):
+        await update.message.reply_text("⚠️ Esta escola já está cadastrada!")
+        return
+
+    sucesso = adicionar_escola(user_id, nome, funcao, escola, telefone, email, endereco, localizacao)
+
     if sucesso:
-        await update.message.reply_text(f"✅ *Usuário {novo_admin} agora é um administrador!*")
-        print(f"✅ Novo administrador adicionado: {novo_admin}")
+        await update.message.reply_text(f"✅ *Usuário {nome} cadastrado com sucesso!*", parse_mode="Markdown")
     else:
-        await update.message.reply_text("❌ Erro ao adicionar administrador.")
-
-# 🔹 Função para remover um administrador
-async def remove_admin(update: Update, context):
-    if len(context.args) != 1:
-        await update.message.reply_text("⚠️ Uso correto: `/removeadmin <ChatID>`")
-        return
-
-    admin_remover = context.args[0]
-
-    administradores = obter_administradores()
-    if admin_remover not in administradores:
-        await update.message.reply_text("⚠️ Este usuário não é um administrador.")
-        return
-
-    # Remove da planilha
-    sucesso = remover_admin(admin_remover)
-    if sucesso:
-        await update.message.reply_text(f"❌ *Usuário {admin_remover} foi removido dos administradores.*")
-        print(f"❌ Administrador removido: {admin_remover}")
-    else:
-        await update.message.reply_text("❌ Erro ao remover administrador.")
+        await update.message.reply_text("❌ Erro ao salvar os dados na planilha.")
 
 # 🔹 Função para atualizar a planilha periodicamente (agora assíncrona)
 async def atualizar_planilha_periodicamente():
     while True:
         try:
+            print("🔄 Atualizando planilha...")
             await carregar_dados_csv()
-            print("📌 Planilha atualizada.")
+            print("✅ Planilha atualizada com sucesso!")
         except Exception as e:
-            logging.error(f"❌ Erro ao atualizar a planilha: {e}")
-        await asyncio.sleep(300)  # Aguarda 5 minutos antes de atualizar novamente
+            logging.error(f"❌ Erro ao atualizar a planilha: {e}", exc_info=True)
+
+        await asyncio.sleep(300)  # 🔄 Aguarda 5 minutos antes da próxima atualização
+
+async def listar_escolas(update: Update, context):
+    user_id = str(update.message.from_user.id)
+    
+    # 🚨 Verifica se o usuário é um administrador
+    administradores = obter_administradores()
+    if user_id not in administradores:
+        await update.message.reply_text("⚠️ Apenas administradores podem visualizar a lista de escolas cadastradas.")
+        return
+
+    try:
+        planilha = conectar_planilha()
+        aba = planilha.worksheet("Escolas")
+        registros = aba.get_all_values()
+
+        if len(registros) <= 1:
+            await update.message.reply_text("📌 Nenhuma escola cadastrada ainda.")
+            return
+
+        # 🔹 Monta a lista de escolas
+        mensagem = "🏫 *Lista de Escolas Cadastradas:*\n\n"
+        for idx, linha in enumerate(registros[1:], start=1):  # Pula o cabeçalho
+            mensagem += f"{idx}. {linha[3]} - {linha[1]} ({linha[2]})\n"
+
+        await update.message.reply_text(mensagem, parse_mode='Markdown')
+
+    except Exception as e:
+        await update.message.reply_text("❌ Erro ao buscar lista de escolas.")
 
 
 # 🔹 Função para iniciar o bot
 async def iniciar_bot():
-    try:
-        app = Application.builder().token(TELEGRAM_TOKEN).build()
+    while True:  # 🔄 Garante que o bot não pare mesmo se der erro
+        try:
+            app = Application.builder().token(TELEGRAM_TOKEN).build()
 
-        # 🔹 Adicionar comandos ao bot
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("ajuda", ajuda))
-        app.add_handler(CommandHandler("addadmin", add_admin))
-        app.add_handler(CommandHandler("removeadmin", remove_admin))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
+            # 🔹 Adicionar comandos ao bot
+            app.add_handler(CommandHandler("start", start))
+            app.add_handler(CommandHandler("ajuda", ajuda))
+            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mensagem_recebida))
+            app.add_handler(CommandHandler("listarescolas", listar_escolas))
 
-        # 🔹 Iniciar a atualização da planilha em segundo plano
-        asyncio.create_task(atualizar_planilha_periodicamente())
+            # 🔹 Iniciar a atualização da planilha em segundo plano
+            asyncio.create_task(atualizar_planilha_periodicamente())
 
-        print("✅ Bot iniciado!")
-        await app.run_polling()
+            print("✅ Bot iniciado e rodando sem parar!")
+            await app.run_polling()
 
-    except Exception as e:
-        logging.error(f"❌ Erro ao iniciar o bot: {e}")
+        except Exception as e:
+            logging.error(f"❌ Erro crítico! Reiniciando o bot... Erro: {e}")
+            await asyncio.sleep(5)  # 🔄 Aguarda 5s antes de tentar reiniciar
+
