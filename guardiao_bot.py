@@ -200,7 +200,7 @@ async def mensagem_recebida(update: Update, context):
     """Processa mensagens recebidas e identifica emergências."""
     global emergencia_ativa  
     try:
-        user_id = str(update.message.from_user.id)
+        user_id = str(update.effective_user.id)
         texto = update.message.text.strip()  # Remove espaços extras
         dados_escola = buscar_dados_escola(user_id)
 
@@ -429,7 +429,7 @@ async def atualizar_planilha_periodicamente():
         await asyncio.sleep(300)  # 🔄 Aguarda 5 minutos antes da próxima atualização
 
 async def listar_escolas(update: Update, context):
-    user_id = str(update.message.from_user.id)
+    user_id = str(update.effective_user.id)
     
     # 🚨 Verifica se o usuário é um administrador
     administradores = obter_administradores()
@@ -479,3 +479,6 @@ async def iniciar_bot():
             logging.error(f"❌ Erro crítico! Reiniciando o bot... Erro: {e}")
             await asyncio.sleep(5)  # 🔄 Aguarda 5s antes de tentar reiniciar
 
+# 🔹 Garantir que o script só rode quando chamado diretamente
+if __name__ == "__main__":
+    asyncio.run(iniciar_bot())
