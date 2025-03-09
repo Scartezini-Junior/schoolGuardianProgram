@@ -1,11 +1,10 @@
-Flask==2.2.5  # Versão compatível
-werkzeug==2.2.3  # Evita erro no import
-python-telegram-bot==20.0
-requests==2.28.1
-gspread==5.7.2
-google-auth==2.14.1
-google-auth-oauthlib==0.4.6
-google-auth-httplib2==0.1.0
+python-telegram-bot==20.3  # 🔹 Usa a versão mais estável e recente
+requests==2.31.0  # 🔹 Atualiza para evitar problemas de segurança
+gspread==5.10.0  # 🔹 Versão mais recente para compatibilidade
+google-auth==2.25.2  # 🔹 Mantém atualizado e compatível
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.2.0
 oauth2client==4.1.3
-aiohttp==3.8.3
-
+aiohttp==3.9.3  # 🔹 Evita erros de conexão assíncrona
+Flask==2.2.5  # 🔹 Mantém compatibilidade com Render
+werkzeug==2.2.3  # 🔹 Evita erro de importação no Flask
