@@ -11,6 +11,21 @@ import requests
 from google.oauth2.service_account import Credentials
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from flask import Flask
+import threading
+# Criando um servidor Flask Fake para manter o Render "feliz"
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot está rodando!"
+
+# Rodando o servidor Flask em uma thread separada
+def iniciar_servidor():
+    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)  # A porta pode ser qualquer uma
+
+# Iniciar o servidor Flask antes do bot
+threading.Thread(target=iniciar_servidor, daemon=True).start()
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
