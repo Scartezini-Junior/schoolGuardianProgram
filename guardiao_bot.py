@@ -472,4 +472,6 @@ async def iniciar_bot():
 
 
 if __name__ == "__main__":
-    asyncio.run(iniciar_bot())  # Iniciar o bot normalmente
+    loop = asyncio.get_event_loop()
+    loop.create_task(iniciar_bot())
+    loop.run_forever()
